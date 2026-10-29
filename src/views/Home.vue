@@ -1,160 +1,131 @@
 <template>
   <ion-page>
-    <!-- Header Aplikasi Mobile -->
-    <ion-header :translucent="true" class="ion-no-border custom-header">
-      <ion-toolbar class="header-toolbar">
-        <ion-title class="app-brand-title">
-          <div class="brand-wrapper">
-            <span class="crypto-icon">⚡</span>
+    <!-- Header Aplikasi Fintech Mobile -->
+    <ion-header :translucent="true" class="ion-no-border header-fintech">
+      <ion-toolbar class="toolbar-fintech">
+        <ion-title class="brand-title">
+          <div class="brand-box">
+            <div class="brand-icon">⚡</div>
             <div>
-              <div class="brand-name">Crypto Ticker</div>
-              <div class="brand-sub">MSIM4401 • Ionic Vue Capacitor</div>
+              <div class="brand-name">Crypto Markets</div>
+              <div class="brand-sub">Real-Time Cryptocurrency Ticker</div>
             </div>
           </div>
         </ion-title>
+
         <ion-buttons slot="end">
           <ion-button
-            class="header-refresh-btn"
+            class="refresh-btn-fintech"
             fill="solid"
             color="primary"
             :disabled="isLoading"
             @click="ambilData"
           >
-            <ion-spinner v-if="isLoading" name="crescent" class="refresh-spinner"></ion-spinner>
+            <ion-spinner v-if="isLoading" name="crescent" class="btn-spinner"></ion-spinner>
             <span v-else>Refresh</span>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true" class="main-content">
-      <!-- Native Mobile Pull To Refresh (Capacitor Friendly) -->
+    <ion-content :fullscreen="true" class="content-fintech">
+      <!-- Native Mobile Pull To Refresh (Capacitor) -->
       <ion-refresher slot="fixed" @ionRefresh="handlePullRefresh($event)">
         <ion-refresher-content
           pulling-icon="chevron-down-circle-outline"
-          pulling-text="Tarik untuk memperbarui..."
+          pulling-text="Tarik untuk refresh harga..."
           refreshing-spinner="crescent"
-          refreshing-text="Memuat harga crypto terbaru..."
+          refreshing-text="Mengambil harga terbaru..."
         >
         </ion-refresher-content>
       </ion-refresher>
 
-      <div class="mobile-wrapper">
-        <!-- Quick Stats & Last Updated Badge -->
-        <div class="stats-banner">
-          <div class="stat-pill">
+      <div class="fintech-mobile-container">
+        <!-- Live Market Status Bar -->
+        <div class="market-status-bar">
+          <div class="status-chip live-chip">
             <span class="live-dot"></span>
-            <span>Live Coinlore API</span>
+            <span>API Online</span>
           </div>
-          <div v-if="lastUpdated" class="stat-pill update-time">
-            🕒 {{ lastUpdated }}
+          <div v-if="lastUpdated" class="status-chip time-chip">
+            🕒 Diperbarui: {{ lastUpdated }}
           </div>
         </div>
 
         <!-- Search Bar Real-Time Filter -->
-        <div class="search-section">
+        <div class="search-box">
           <ion-searchbar
             v-model="searchQuery"
-            placeholder="Cari coin (misal: BTC, Ethereum)..."
+            placeholder="Cari koin (misal: BTC, Solana)..."
             :debounce="150"
-            class="custom-searchbar"
+            class="fintech-searchbar"
           ></ion-searchbar>
         </div>
 
-        <!-- Segment Switcher: Tampilan Soal Tugas vs Tampilan Modern Fintech -->
-        <div class="view-switch-container">
-          <ion-segment v-model="viewMode" value="task" mode="ios" class="segment-custom">
-            <ion-segment-button value="task">
-              <ion-label>Sesuai Soal Tugas</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="modern">
-              <ion-label>Fintech Modern</ion-label>
-            </ion-segment-button>
-          </ion-segment>
+        <!-- Summary Header List -->
+        <div class="list-header-row">
+          <span class="list-title">Aset Cryptocurrency</span>
+          <span class="list-count">{{ filteredCoins.length }} Koin</span>
         </div>
 
-        <!-- Loading Skeleton / Spinner State -->
-        <div v-if="isLoading && (!cryptoData || cryptoData.length === 0)" class="loading-container">
-          <ion-spinner name="crescent" color="primary" class="big-spinner"></ion-spinner>
-          <p class="loading-text">Sedang mengambil data crypto terkini...</p>
+        <!-- Loading State -->
+        <div v-if="isLoading && (!cryptoData || cryptoData.length === 0)" class="state-card loading-card">
+          <ion-spinner name="crescent" color="primary" class="state-spinner"></ion-spinner>
+          <p>Memuat pasar crypto terkini...</p>
         </div>
 
         <!-- Error State -->
-        <div v-else-if="errorMessage" class="error-container">
-          <div class="error-emoji">⚠️</div>
-          <p class="error-msg">{{ errorMessage }}</p>
-          <ion-button shape="round" color="danger" @click="ambilData">
+        <div v-else-if="errorMessage" class="state-card error-card">
+          <div class="state-icon">⚠️</div>
+          <p>{{ errorMessage }}</p>
+          <ion-button shape="round" color="danger" size="small" @click="ambilData">
             Coba Lagi
           </ion-button>
         </div>
 
         <!-- Empty Search Result -->
-        <div v-else-if="filteredCoins.length === 0" class="empty-container">
-          <div class="empty-emoji">🔍</div>
-          <p class="empty-msg">Tidak ada cryptocurrency yang cocok dengan "<strong>{{ searchQuery }}</strong>"</p>
-          <ion-button size="small" fill="outline" @click="searchQuery = ''">Reset Pencarian</ion-button>
+        <div v-else-if="filteredCoins.length === 0" class="state-card empty-card">
+          <div class="state-icon">🔍</div>
+          <p>Tidak menemukan koin "<strong>{{ searchQuery }}</strong>"</p>
+          <ion-button size="small" fill="outline" shape="round" @click="searchQuery = ''">
+            Reset Pencarian
+          </ion-button>
         </div>
 
-        <!-- TAMPILAN 1: SESUAI SOAL TUGAS (Dengan sentuhan estetika tinggi) -->
-        <div v-else-if="viewMode === 'task'" class="task-view-container">
-          <table class="task-crypto-table">
-            <tbody>
-              <tr
-                v-for="coin in filteredCoins"
-                :key="'task-' + coin.id"
-                class="task-crypto-row"
-              >
-                <!-- Kolom 1: Rank -->
-                <td class="col-rank">
-                  <div class="cell-label">Rank</div>
-                  <div class="rank-value-wrapper">
-                    <span class="rank-val">{{ coin.rank }}</span>
-                  </div>
-                </td>
-
-                <!-- Kolom 2: Nama & Simbol -->
-                <td class="col-name-symbol">
-                  <div class="cell-label ellipsis-text">{{ coin.name }}</div>
-                  <div class="symbol-val">{{ coin.symbol }}</div>
-                </td>
-
-                <!-- Kolom 3: Harga USD -->
-                <td class="col-price">
-                  <div class="cell-label">USD</div>
-                  <div class="price-val">{{ coin.price_usd }}</div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- TAMPILAN 2: FINTECH MODERN CARDS (Mobile-First Card View) -->
-        <div v-else class="modern-cards-container">
+        <!-- TAMPILAN FINTECH MODERN (Single Clean View) -->
+        <div v-else class="coin-list">
           <div
             v-for="coin in filteredCoins"
-            :key="'modern-' + coin.id"
-            class="crypto-modern-card"
+            :key="coin.id"
+            class="coin-card"
           >
-            <div class="card-left">
-              <div class="coin-avatar" :style="{ backgroundColor: getCoinColor(coin.symbol) }">
+            <!-- Bagian Kiri: Avatar Simbol & Nama Koin -->
+            <div class="coin-left">
+              <div
+                class="coin-avatar"
+                :style="{ background: getCoinGradient(coin.symbol) }"
+              >
                 {{ coin.symbol.slice(0, 3) }}
               </div>
-              <div class="coin-meta">
-                <div class="coin-symbol-row">
-                  <span class="modern-symbol">{{ coin.symbol }}</span>
-                  <span class="modern-rank-badge">#{{ coin.rank }}</span>
+              <div class="coin-details">
+                <div class="symbol-rank-row">
+                  <span class="coin-symbol">{{ coin.symbol }}</span>
+                  <span class="coin-rank-pill">Rank #{{ coin.rank }}</span>
                 </div>
-                <div class="modern-name">{{ coin.name }}</div>
+                <div class="coin-name">{{ coin.name }}</div>
               </div>
             </div>
 
-            <div class="card-right">
-              <div class="modern-price">${{ formatPrice(coin.price_usd) }}</div>
+            <!-- Bagian Kanan: Harga USD & Persentase 24 Jam -->
+            <div class="coin-right">
+              <div class="coin-price">
+                <span class="currency-prefix">$</span>{{ formatPrice(coin.price_usd) }}
+              </div>
               <div
-                class="modern-change"
-                :class="isNegative(coin.percent_change_24h) ? 'down' : 'up'"
+                class="coin-badge-change"
+                :class="isNegative(coin.percent_change_24h) ? 'badge-down' : 'badge-up'"
               >
-                <span class="arrow-indicator">{{ isNegative(coin.percent_change_24h) ? '▼' : '▲' }}</span>
+                <span class="arrow-symbol">{{ isNegative(coin.percent_change_24h) ? '▼' : '▲' }}</span>
                 <span>{{ Math.abs(Number(coin.percent_change_24h) || 0) }}%</span>
               </div>
             </div>
@@ -162,8 +133,9 @@
         </div>
 
         <!-- Footer / Attribution -->
-        <div class="footer-info">
-          <span>Menampilkan {{ filteredCoins.length }} dari {{ cryptoData ? cryptoData.length : 0 }} Cryptocurrency</span>
+        <div class="fintech-footer">
+          <p>Data bersumber dari <strong>Coinlore API</strong></p>
+          <p class="sub-footer">MSIM4401 Modul Praktikum Ionic Vue • Powered by Capacitor</p>
         </div>
       </div>
     </ion-content>
@@ -181,9 +153,6 @@ import {
   IonButton,
   IonSpinner,
   IonSearchbar,
-  IonSegment,
-  IonSegmentButton,
-  IonLabel,
   IonRefresher,
   IonRefresherContent,
 } from '@ionic/vue';
@@ -220,9 +189,6 @@ export default defineComponent({
     IonButton,
     IonSpinner,
     IonSearchbar,
-    IonSegment,
-    IonSegmentButton,
-    IonLabel,
     IonRefresher,
     IonRefresherContent,
   },
@@ -232,7 +198,6 @@ export default defineComponent({
       isLoading: false,
       errorMessage: '',
       searchQuery: '',
-      viewMode: 'task',
       lastUpdated: '',
     };
   },
@@ -256,12 +221,12 @@ export default defineComponent({
     async ambilData() {
       this.isLoading = true;
       this.errorMessage = '';
-      
-      // Getar haptic via Capacitor (jika berjalan di perangkat native)
+
+      // Haptic tactile feedback via Capacitor
       try {
         await Haptics.impact({ style: ImpactStyle.Light });
       } catch {
-        // Abaikan jika di browser desktop
+        // Fallback untuk browser
       }
 
       try {
@@ -276,7 +241,7 @@ export default defineComponent({
         this.lastUpdated = now.toLocaleTimeString('id-ID');
       } catch (error) {
         console.error('Gagal mengambil data:', error);
-        this.errorMessage = 'Gagal mengambil data API. Pastikan internet aktif.';
+        this.errorMessage = 'Gagal memuat data dari Coinlore API. Silakan periksa koneksi internet.';
       } finally {
         this.isLoading = false;
       }
@@ -296,94 +261,109 @@ export default defineComponent({
     isNegative(percentStr: string | number): boolean {
       return Number(percentStr) < 0;
     },
-    getCoinColor(symbol: string): string {
-      const colors: Record<string, string> = {
-        BTC: '#f7931a',
-        ETH: '#627eea',
-        USDT: '#26a17b',
-        BNB: '#f3ba2f',
-        SOL: '#14f195',
-        USDC: '#2775ca',
-        XRP: '#23292f',
-        ADA: '#0033ad',
-        AVAX: '#e84142',
-        DOGE: '#c2a633',
+    getCoinGradient(symbol: string): string {
+      const gradients: Record<string, string> = {
+        BTC: 'linear-gradient(135deg, #f7931a, #e67e22)',
+        ETH: 'linear-gradient(135deg, #627eea, #3b5998)',
+        USDT: 'linear-gradient(135deg, #26a17b, #1b8061)',
+        BNB: 'linear-gradient(135deg, #f3ba2f, #d4981d)',
+        SOL: 'linear-gradient(135deg, #9945ff, #14f195)',
+        USDC: 'linear-gradient(135deg, #2775ca, #1a5697)',
+        XRP: 'linear-gradient(135deg, #23292f, #434a54)',
+        ADA: 'linear-gradient(135deg, #0033ad, #002273)',
+        AVAX: 'linear-gradient(135deg, #e84142, #b82b2c)',
+        DOGE: 'linear-gradient(135deg, #c2a633, #a68c22)',
       };
-      return colors[symbol.toUpperCase()] || '#3b82f6';
+      return gradients[symbol.toUpperCase()] || 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
     },
   },
 });
 </script>
 
 <style scoped>
-/* App Header */
-.custom-header {
-  background: var(--ion-background-color, #ffffff);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+/* Header Fintech */
+.header-fintech {
+  background: #ffffff;
+  border-bottom: 1px solid #eef2f6;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
 }
 
-.header-toolbar {
-  --padding-start: 12px;
-  --padding-end: 12px;
+.toolbar-fintech {
+  --padding-start: 14px;
+  --padding-end: 14px;
+  --min-height: 58px;
 }
 
-.brand-wrapper {
+.brand-box {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.crypto-icon {
-  font-size: 22px;
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
 }
 
 .brand-name {
   font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--ion-text-color, #111827);
-  letter-spacing: -0.3px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
 }
 
 .brand-sub {
   font-size: 0.68rem;
-  color: var(--ion-color-medium, #6b7280);
+  color: #64748b;
   font-weight: 500;
 }
 
-.header-refresh-btn {
+.refresh-btn-fintech {
+  --background: #2563eb;
+  --background-hover: #1d4ed8;
+  --background-activated: #1e40af;
   --border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
   height: 34px;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
-.refresh-spinner {
+.btn-spinner {
   width: 16px;
   height: 16px;
   --color: #ffffff;
 }
 
-/* Mobile Wrapper Container */
-.main-content {
+/* Konten Utama */
+.content-fintech {
   --background: #f8fafc;
 }
 
-.mobile-wrapper {
+.fintech-mobile-container {
   max-width: 480px;
   margin: 0 auto;
-  padding: 12px 14px 40px 14px;
+  padding: 14px 14px 40px 14px;
 }
 
-/* Stats Banner */
-.stats-banner {
+/* Status Bar */
+.market-status-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
-  padding: 0 4px;
+  padding: 0 2px;
 }
 
-.stat-pill {
+.status-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -393,11 +373,11 @@ export default defineComponent({
   font-size: 0.72rem;
   font-weight: 600;
   color: #334155;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   border: 1px solid #e2e8f0;
 }
 
-.update-time {
+.time-chip {
   color: #64748b;
   font-weight: 500;
 }
@@ -407,271 +387,213 @@ export default defineComponent({
   height: 7px;
   background-color: #10b981;
   border-radius: 50%;
-  animation: pulse 1.8s infinite;
+  animation: pulse-dot 1.8s infinite;
 }
 
-@keyframes pulse {
+@keyframes pulse-dot {
   0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* Search Section */
-.search-section {
-  margin-bottom: 10px;
+/* Search Bar */
+.search-box {
+  margin-bottom: 14px;
 }
 
-.custom-searchbar {
+.fintech-searchbar {
   --background: #ffffff;
   --border-radius: 12px;
-  --box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  --box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
   --placeholder-color: #94a3b8;
   padding: 0;
   font-size: 0.88rem;
 }
 
-/* Segment Switcher */
-.view-switch-container {
-  margin-bottom: 16px;
+/* Header Daftar */
+.list-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 4px 10px 4px;
 }
 
-.segment-custom {
-  background: #e2e8f0;
+.list-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+}
+
+.list-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 2px 8px;
   border-radius: 10px;
-  padding: 3px;
 }
 
-/* TAMPILAN 1: SESUAI SOAL TUGAS (Tabel Kuning/Krem Elegan) */
-.task-view-container {
-  background-color: #fbf2c8;
-  border: 1px solid #d8c896;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-.task-crypto-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.task-crypto-row {
-  border-bottom: 1px solid #d8c896;
-  transition: background-color 0.15s ease;
-}
-
-.task-crypto-row:last-child {
-  border-bottom: none;
-}
-
-.task-crypto-row:active {
-  background-color: #f3e6b4;
-}
-
-.col-rank {
-  width: 22%;
-  padding: 11px 8px 11px 14px;
-  vertical-align: middle;
-}
-
-.col-name-symbol {
-  width: 42%;
-  padding: 11px 8px;
-  vertical-align: middle;
-}
-
-.col-price {
-  width: 36%;
-  padding: 11px 14px 11px 8px;
-  vertical-align: middle;
-}
-
-.cell-label {
-  font-size: 11px;
-  line-height: 14px;
-  color: #374151;
-  font-weight: 500;
-  margin-bottom: 2px;
-}
-
-.ellipsis-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 140px;
-}
-
-.rank-val {
-  font-size: 16px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.symbol-val {
-  font-size: 16px;
-  font-weight: 700;
-  color: #111827;
-  letter-spacing: -0.2px;
-}
-
-.price-val {
-  font-size: 15px;
-  font-weight: 700;
-  color: #111827;
-}
-
-/* TAMPILAN 2: FINTECH MODERN CARDS */
-.modern-cards-container {
+/* Daftar Kartu Crypto */
+.coin-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.crypto-modern-card {
+.coin-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: #ffffff;
-  padding: 14px 16px;
-  border-radius: 14px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  padding: 13px 16px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
   border: 1px solid #f1f5f9;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.crypto-modern-card:active {
+.coin-card:active {
   transform: scale(0.985);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
 }
 
-.card-left {
+/* Kiri: Avatar, Simbol & Rank */
+.coin-left {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
 .coin-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
   font-weight: 800;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   letter-spacing: -0.5px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
-.coin-meta {
+.coin-details {
   display: flex;
   flex-direction: column;
 }
 
-.coin-symbol-row {
+.symbol-rank-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
-.modern-symbol {
-  font-size: 1rem;
+.coin-symbol {
+  font-size: 1.02rem;
   font-weight: 700;
   color: #0f172a;
 }
 
-.modern-rank-badge {
+.coin-rank-pill {
   background: #f1f5f9;
-  color: #64748b;
-  font-size: 0.65rem;
+  color: #475569;
+  font-size: 0.66rem;
   font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
 }
 
-.modern-name {
+.coin-name {
   font-size: 0.78rem;
   color: #64748b;
   margin-top: 1px;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.card-right {
+/* Kanan: Harga USD & Badge 24h */
+.coin-right {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
 }
 
-.modern-price {
-  font-size: 1rem;
-  font-weight: 700;
+.coin-price {
+  font-size: 1.02rem;
+  font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.3px;
 }
 
-.modern-change {
-  display: flex;
+.currency-prefix {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-right: 1px;
+}
+
+.coin-badge-change {
+  display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 3px;
+  padding: 2px 7px;
+  border-radius: 6px;
 }
 
-.modern-change.up {
-  color: #10b981;
+.badge-up {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
 }
 
-.modern-change.down {
-  color: #ef4444;
+.badge-down {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
 }
 
-.arrow-indicator {
-  font-size: 0.6rem;
+.arrow-symbol {
+  font-size: 0.58rem;
 }
 
-/* Status States */
-.loading-container,
-.error-container,
-.empty-container {
+/* Status State Cards */
+.state-card {
   background: #ffffff;
   border-radius: 16px;
   padding: 36px 16px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
   border: 1px solid #f1f5f9;
+  color: #475569;
 }
 
-.big-spinner {
+.state-spinner {
   width: 32px;
   height: 32px;
 }
 
-.loading-text {
-  font-size: 0.88rem;
-  color: #64748b;
-  margin-top: 12px;
-}
-
-.error-emoji,
-.empty-emoji {
-  font-size: 36px;
+.state-icon {
+  font-size: 34px;
   margin-bottom: 8px;
 }
 
-.error-msg,
-.empty-msg {
-  font-size: 0.9rem;
-  color: #475569;
-  margin-bottom: 14px;
-}
-
-/* Footer Info */
-.footer-info {
+/* Footer */
+.fintech-footer {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 24px;
   font-size: 0.75rem;
   color: #94a3b8;
-  font-weight: 500;
+  line-height: 1.5;
+}
+
+.sub-footer {
+  font-size: 0.68rem;
+  color: #cbd5e1;
 }
 </style>
