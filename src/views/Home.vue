@@ -1,112 +1,64 @@
 <template>
   <ion-page>
-    <ion-header :translucent="true">
-      <ion-toolbar color="primary">
-        <ion-title>Praktikum 8 - Daftar User</ion-title>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content :fullscreen="true" class="ion-padding">
-      <ion-header collapse="condense">
-        <ion-toolbar>
-          <ion-title size="large">Daftar User</ion-title>
-        </ion-toolbar>
-      </ion-header>
-
-      <div id="container">
-        <!-- Header & Action Card -->
-        <ion-card class="action-card">
-          <ion-card-header>
-            <div class="header-badge-wrapper">
-              <ion-badge color="primary">RESTful API</ion-badge>
-              <ion-badge v-if="dataUsers" color="success">{{ dataUsers.length }} User Dimuat</ion-badge>
-            </div>
-            <ion-card-title class="card-title-custom">Daftar User</ion-card-title>
-            <ion-card-subtitle>Sumber: jsonplaceholder.typicode.com/users</ion-card-subtitle>
-          </ion-card-header>
-
-          <ion-card-content>
-            <p class="desc-text">
-              Klik tombol di bawah untuk mengambil data pengguna menggunakan Axios dan service EndPointAccess.
-            </p>
-            <div class="btn-wrapper">
-              <ion-button
-                expand="block"
-                shape="round"
-                color="primary"
-                :disabled="isLoading"
-                @click="ambilData"
-              >
-                <ion-spinner v-if="isLoading" name="crescent" class="btn-spinner"></ion-spinner>
-                <span v-else>Ambil data</span>
-              </ion-button>
-            </div>
-
-            <!-- View Switcher for Mobile -->
-            <div v-if="dataUsers && dataUsers.length > 0" class="view-switcher">
-              <ion-segment v-model="selectedView" value="cards">
-                <ion-segment-button value="cards">
-                  <ion-label>Mobile Cards</ion-label>
-                </ion-segment-button>
-                <ion-segment-button value="table">
-                  <ion-label>Format Tabel</ion-label>
-                </ion-segment-button>
-              </ion-segment>
-            </div>
-          </ion-card-content>
-        </ion-card>
-
-        <!-- Initial Placeholder State -->
-        <div v-if="!dataUsers && !isLoading" class="empty-state">
-          <div class="empty-icon">👥</div>
-          <p class="empty-text">Belum ada data. Silakan tekan tombol <strong>Ambil data</strong> di atas.</p>
+    <ion-content :fullscreen="true">
+      <div class="app-screen">
+        <!-- Tombol Refresh -->
+        <div class="header-action">
+          <ion-button
+            class="refresh-btn"
+            :disabled="isLoading"
+            @click="ambilData"
+          >
+            <ion-spinner
+              v-if="isLoading"
+              name="crescent"
+              class="btn-spinner"
+            ></ion-spinner>
+            <span v-else>Refresh</span>
+          </ion-button>
         </div>
 
-        <!-- Mobile-first Cards View -->
-        <div v-if="dataUsers && selectedView === 'cards'" class="user-cards-list">
-          <ion-card v-for="user in dataUsers" :key="'card-' + user.id" class="user-item-card">
-            <ion-card-header>
-              <div class="user-card-header-row">
-                <span class="user-id-badge">#{{ user.id }}</span>
-                <span class="company-badge">{{ user.company?.name }}</span>
-              </div>
-              <ion-card-title class="user-name">{{ user.name }}</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              <div class="user-info-row">
-                <span class="info-label">📧 Email:</span>
-                <a :href="'mailto:' + user.email" class="email-link">{{ user.email }}</a>
-              </div>
-              <div class="user-info-row">
-                <span class="info-label">🏢 Perusahaan:</span>
-                <span class="company-text">{{ user.company?.name }}</span>
-              </div>
-            </ion-card-content>
-          </ion-card>
+        <!-- Indikator Loading Pertama Kali -->
+        <div v-if="isLoading && (!cryptoData || cryptoData.length === 0)" class="status-box">
+          <ion-spinner name="crescent" color="primary"></ion-spinner>
+          <p>Memuat data cryptocurrency...</p>
         </div>
 
-        <!-- Table View (Sesuai modul praktikum halaman 8.7 & 8.9) -->
-        <div v-if="dataUsers && selectedView === 'table'" class="table-responsive">
-          <table class="center">
-            <thead>
-              <tr>
-                <th>id</th>
-                <th>Name</th>
-                <th>E-mail</th>
-                <th>Company</th>
-              </tr>
-            </thead>
+        <!-- Daftar Cryptocurrency Sesuai Tampilan Soal Tugas -->
+        <div v-if="cryptoData && cryptoData.length > 0" class="crypto-container">
+          <table class="crypto-table">
             <tbody>
-              <tr v-for="user in dataUsers" :key="user.id">
-                <td class="text-center font-bold">{{ user.id }}</td>
-                <td>{{ user.name }}</td>
-                <td>
-                  <a :href="'mailto:' + user.email" class="table-email">{{ user.email }}</a>
+              <tr
+                v-for="coin in cryptoData"
+                :key="coin.id"
+                class="crypto-row"
+              >
+                <!-- Kolom 1: Rank -->
+                <td class="col-rank">
+                  <div class="cell-label">Rank</div>
+                  <div class="cell-value">{{ coin.rank }}</div>
                 </td>
-                <td>{{ user.company?.name }}</td>
+
+                <!-- Kolom 2: Nama & Simbol -->
+                <td class="col-name-symbol">
+                  <div class="cell-label ellipsis">{{ coin.name }}</div>
+                  <div class="cell-value">{{ coin.symbol }}</div>
+                </td>
+
+                <!-- Kolom 3: Harga USD -->
+                <td class="col-price">
+                  <div class="cell-label">USD</div>
+                  <div class="cell-value">{{ coin.price_usd }}</div>
+                </td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Pesan Error jika Gagal -->
+        <div v-if="errorMessage" class="status-box error">
+          <p>{{ errorMessage }}</p>
+          <ion-button size="small" @click="ambilData">Coba Lagi</ion-button>
         </div>
       </div>
     </ion-content>
@@ -115,64 +67,66 @@
 
 <script lang="ts">
 import {
-  IonContent,
-  IonHeader,
   IonPage,
-  IonTitle,
-  IonToolbar,
+  IonContent,
   IonButton,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardSubtitle,
-  IonCardContent,
-  IonBadge,
   IonSpinner,
-  IonSegment,
-  IonSegmentButton,
-  IonLabel,
 } from '@ionic/vue';
 import { defineComponent } from 'vue';
 import EndPointAccess from '@/services/EndPointAccess';
+
+interface CryptoTicker {
+  id: string;
+  symbol: string;
+  name: string;
+  nameid: string;
+  rank: number;
+  price_usd: string;
+  percent_change_24h: string;
+  percent_change_1h: string;
+  percent_change_7d: string;
+  price_btc: string;
+  market_cap_usd: string;
+  volume24: number;
+}
 
 let resData: any;
 
 export default defineComponent({
   name: 'Home',
   components: {
-    IonContent,
-    IonHeader,
     IonPage,
-    IonTitle,
-    IonToolbar,
+    IonContent,
     IonButton,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-    IonCardSubtitle,
-    IonCardContent,
-    IonBadge,
     IonSpinner,
-    IonSegment,
-    IonSegmentButton,
-    IonLabel,
   },
   data() {
     return {
-      dataUsers: null as any[] | null,
+      cryptoData: null as CryptoTicker[] | null,
       isLoading: false,
-      selectedView: 'cards',
+      errorMessage: '',
     };
+  },
+  mounted() {
+    // Ambil data otomatis saat halaman dimuat
+    this.ambilData();
   },
   methods: {
     async ambilData() {
       this.isLoading = true;
+      this.errorMessage = '';
       try {
-        resData = new EndPointAccess('https://jsonplaceholder.typicode.com/users');
+        resData = new EndPointAccess('https://api.coinlore.net/api/tickers/');
         const response: any = await resData.getRes();
-        this.dataUsers = response.data;
+        // API coinlore membungkus array data di response.data.data
+        if (response.data && Array.isArray(response.data.data)) {
+          this.cryptoData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          this.cryptoData = response.data;
+        }
       } catch (error) {
-        console.error('Gagal mengambil data:', error);
+        console.error('Gagal mengambil data crypto:', error);
+        this.errorMessage = 'Gagal memuat data dari API Coinlore. Silakan periksa koneksi internet.';
       } finally {
         this.isLoading = false;
       }
@@ -182,196 +136,128 @@ export default defineComponent({
 </script>
 
 <style scoped>
-#container {
-  max-width: 680px;
+/* Mobile-first Layout */
+.app-screen {
+  max-width: 440px;
   margin: 0 auto;
-  padding: 8px 4px 32px 4px;
-}
-
-.action-card {
-  margin: 8px 4px 16px 4px;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.header-badge-wrapper {
+  padding: 18px 12px 36px 12px;
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  flex-direction: column;
+  min-height: 100%;
 }
 
-.card-title-custom {
-  font-size: 1.4rem;
-  font-weight: 700;
+/* Tombol Refresh */
+.header-action {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 18px;
 }
 
-.desc-text {
-  font-size: 0.92rem;
-  color: var(--ion-color-medium, #666);
-  margin-bottom: 16px;
-  line-height: 1.4;
-}
-
-.btn-wrapper {
-  margin: 8px 0;
+.refresh-btn {
+  --background: #1976d2;
+  --background-hover: #1565c0;
+  --background-activated: #0d47a1;
+  --color: #ffffff;
+  --border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: none;
+  min-height: 36px;
+  height: 36px;
+  --padding-start: 22px;
+  --padding-end: 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .btn-spinner {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
+  --color: #ffffff;
 }
 
-.view-switcher {
-  margin-top: 16px;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px 16px;
-  background: var(--ion-card-background, #fff);
-  border-radius: 16px;
-  margin: 12px 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
-}
-
-.empty-text {
-  color: var(--ion-color-medium, #777);
-  font-size: 0.95rem;
-  margin: 0;
-}
-
-/* Mobile-first Cards */
-.user-cards-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 8px 4px;
-}
-
-.user-item-card {
-  margin: 0;
-  border-radius: 14px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-  border-left: 4px solid var(--ion-color-primary, #3880ff);
-  transition: transform 0.15s ease;
-}
-
-.user-item-card:active {
-  transform: scale(0.99);
-}
-
-.user-card-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.user-id-badge {
-  background: var(--ion-color-primary, #3880ff);
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.75rem;
-  padding: 3px 8px;
-  border-radius: 12px;
-}
-
-.company-badge {
-  background: rgba(var(--ion-color-primary-rgb, 56, 128, 255), 0.12);
-  color: var(--ion-color-primary, #3880ff);
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 6px;
-}
-
-.user-name {
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--ion-text-color, #222);
-}
-
-.user-info-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.88rem;
-  margin-top: 6px;
-  word-break: break-all;
-}
-
-.info-label {
-  font-weight: 600;
-  color: var(--ion-color-medium, #666);
-  min-width: 95px;
-}
-
-.email-link {
-  color: var(--ion-color-primary, #3880ff);
-  text-decoration: none;
-}
-
-.company-text {
-  color: var(--ion-text-color, #333);
-}
-
-/* Mobile-first Responsive Table */
-.table-responsive {
+/* Container Tabel Cryptocurrency */
+.crypto-container {
   width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin: 8px 4px;
-  background: var(--ion-card-background, #fff);
-  border-radius: 14px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  background-color: #fbf2c8;
+  border-top: 1px solid #d8c896;
+  border-bottom: 1px solid #d8c896;
 }
 
-.center {
-  margin-left: auto;
-  margin-right: auto;
+.crypto-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  background-color: #fbf2c8;
 }
 
-.center th {
-  background-color: var(--ion-color-primary, #3880ff);
-  color: #fff;
-  font-weight: 600;
-  padding: 10px 12px;
-  text-align: left;
-  white-space: nowrap;
+.crypto-row {
+  border-bottom: 1px solid #d8c896;
 }
 
-.center td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--ion-color-light-shade, #e6e6e6);
-  color: var(--ion-text-color, #333);
-}
-
-.center tr:last-child td {
+.crypto-row:last-child {
   border-bottom: none;
 }
 
-.center tr:nth-child(even) td {
-  background-color: rgba(var(--ion-color-light-rgb, 244, 245, 248), 0.5);
+/* Styling Kolom */
+.col-rank {
+  width: 22%;
+  padding: 10px 8px 10px 14px;
+  vertical-align: middle;
+  text-align: left;
 }
 
-.text-center {
+.col-name-symbol {
+  width: 40%;
+  padding: 10px 8px;
+  vertical-align: middle;
+  text-align: left;
+}
+
+.col-price {
+  width: 38%;
+  padding: 10px 14px 10px 8px;
+  vertical-align: middle;
+  text-align: left;
+}
+
+/* Label Kecil di Atas */
+.cell-label {
+  font-size: 11px;
+  line-height: 14px;
+  color: #2c2c2c;
+  font-weight: 400;
+  margin-bottom: 2px;
+}
+
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+/* Nilai Utama di Bawah Label */
+.cell-value {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  color: #111111;
+  word-break: break-word;
+}
+
+/* Status Loading & Error */
+.status-box {
   text-align: center;
+  padding: 30px 16px;
+  color: #666;
 }
 
-.font-bold {
-  font-weight: 700;
+.status-box p {
+  margin-top: 10px;
+  font-size: 14px;
 }
 
-.table-email {
-  color: var(--ion-color-primary, #3880ff);
-  text-decoration: none;
+.status-box.error {
+  color: #d32f2f;
 }
 </style>
